@@ -8,6 +8,7 @@ use App\Helpers\ApiFormatter;
 use Illuminate\Routing\Controller;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Validator;
 
 class AuthenticationController extends Controller
@@ -15,7 +16,7 @@ class AuthenticationController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|max:255',
+            'username' => 'required|max:255|unique:users,username',
             'name' => 'required|max:255',
             'password' => 'required',
             'confirm_password' => 'required|same:password'
@@ -25,8 +26,10 @@ class AuthenticationController extends Controller
         }
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
+
+        $message['success'] = ['Registered Account Successfully!'];
         $data = User::create($input);
-        return ApiFormatter::format(200, true, ['Registered account successfully!'], [new UserResource($data)]);
+        return ApiFormatter::format(200, true, $message, [new UserResource($data)]);
     }
 
     public function login(Request $request)
@@ -36,16 +39,16 @@ class AuthenticationController extends Controller
             $success['username'] = $user->username;
             $success['authentication'] = 'Bearer';
             $success['token'] =  $user->createToken('api_token')->plainTextToken;
-            return ApiFormatter::format(200, true, 'Login Success', [$success]);
+            return ApiFormatter::format(200, true, ['Login Success'], [$success]);
         } else {
-            return ApiFormatter::format(404, false, 'Login failed');
+            return ApiFormatter::format(404, false, ['Login failed']);
         }
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return ApiFormatter::format(200, true, 'Logout account successfully');
+        return ApiFormatter::format(200, true, ['Logout account successfully']);
     }
 
     public function detail()
